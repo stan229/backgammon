@@ -6,7 +6,7 @@
  */
 var Backgammon = {
     init : function () {
-        var game = this.game = new Phaser.Game(1280, 720, Phaser.AUTO, 'backgammon');
+        var game = this.game = new Phaser.Game(1280, 720, Phaser.WEBGL, 'backgammon');
 
         game.state.add('Game', this.Game, false);
         game.state.start('Game');
@@ -15,6 +15,7 @@ var Backgammon = {
 
 Backgammon.Game = {
     buckets       : undefined,
+    diceRoll      : undefined,
     diceGroup     : undefined,
     diceRollGroup : undefined,
     preload       : function () {
@@ -79,9 +80,7 @@ Backgammon.Game = {
 
         game.add.button(game.world.width / 2 - 48, 100, 'rollDiceButton', this.onRollDiceButtonClick, this);
 
-
-
-
+        game.input.onDown.add(this.onPointerDown, this);
     },
     addCheckers : function (bucket, color, count) {
         var checker,
@@ -97,18 +96,24 @@ Backgammon.Game = {
     update      : function () {
 
     },
+    render      : function () {
+        for(var i =0 ; i < this.buckets.length; i++) {
+            this.buckets[i].render();
+        }
+    },
     getDiceRoll : function () {
         var firstNum = this.game.rnd.integerInRange(1,6),
-            secondNum = this.game.rnd.integerInRange(1,6);
+            secondNum = this.game.rnd.integerInRange(1,6),
+            diceRoll = [firstNum, secondNum];
 
-        return [firstNum, secondNum];
+        this.diceRoll = diceRoll;
+        return diceRoll;
     },
     showDice : function () {
         var roll = this.getDiceRoll(),
             game = this.game,
             dice;
 
-        console.log(roll);
         dice = this.diceGroup.getAt(0);
         dice.reset(game.world.width / 2 - 96, game.world.height / 2 - 90);
         dice.frame = roll[0] - 1;
@@ -132,6 +137,19 @@ Backgammon.Game = {
     },
     onRollAnimationComplete : function (sprite) {
         this.showDice();
+    },
+    onPointerDown : function (pointer, event) {
+        var buckets = this.buckets,
+            bucket,
+            i;
+        if(this.diceRoll) {
+            for(i = 0; i <= 23; i++) {
+                bucket = buckets[i];
+                if(bucket.rectangle.contains(pointer.position.x, pointer.position.y)) {
+                    
+                }
+            }
+        }
     }
 
 };
@@ -147,6 +165,7 @@ Backgammon.Bucket = {
     y                 : undefined,
     width             : undefined,
     height            : undefined,
+    rectangle         : undefined,
     init              : function (game, index) {
         var position;
 
@@ -163,6 +182,10 @@ Backgammon.Bucket = {
         this.x = position.x;
         this.y = position.y;
 
+        this.rectangle = new Phaser.Rectangle(this.x+5, this.y, this.width-5, this.height);
+    },
+    render : function () {
+        this.game.debug.geom(this.rectangle,'rgba(0,255,0,0.4)');
     },
     addChecker        : function (checker) {
         this.checkers.push(checker);
@@ -182,17 +205,17 @@ Backgammon.Bucket = {
         if (index <= 5) {
             // bottom 48wx36h
             x = 48 + (index * width);
-            y = game.world.height - 100 - height;
+            y = game.world.height - 32 - height;
 
         } else if (index <= 11) {
             x = 705 + ((index - 6) * width);
-            y = game.world.height - 100 - height;
+            y = game.world.height - 32 - height;
         } else if (index <= 17) {
             x = 705 - 88 + ((18 - index) * width);
-            y = 4;
+            y = 32;
         } else if (index <= 23) {
             x = 48 + ((23 - index) * width);
-            y = 4;
+            y = 32;
         }
 
         return {
@@ -204,12 +227,12 @@ Backgammon.Bucket = {
         if (this.index <= 11) {
             return {
                 x : this.x + 10,
-                y : (this.y + this.height) - (this.count * 64)
+                y : (this.y + this.height) - 68 - (this.count * 64)
             };
         } else if (this.index <= 23) {
             return {
                 x : this.x + 10,
-                y : (this.y) + 32 + (this.count * 64)
+                y : (this.y) + 4 + (this.count * 64)
             };
         }
 
