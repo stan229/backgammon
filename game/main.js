@@ -14,11 +14,13 @@ var Backgammon = {
 };
 
 Backgammon.Game = {
-    buckets       : undefined,
-    diceRoll      : undefined,
-    diceGroup     : undefined,
-    diceRollGroup : undefined,
-    preload       : function () {
+    buckets         : undefined,
+    diceRoll        : undefined,
+    diceGroup       : undefined,
+    diceRollGroup   : undefined,
+    playerTurn      : undefined,
+    selectedBuckets : undefined,
+    preload         : function () {
         var load = this.game.load;
 
         load.image('board-bg', 'resources/sprites/board-bg.jpg');
@@ -49,6 +51,7 @@ Backgammon.Game = {
         }
 
         this.buckets = buckets;
+        this.selectedBuckets = [];
 
         this.addCheckers(buckets[0], 'black', 5);
         this.addCheckers(buckets[4], 'white', 3);
@@ -112,15 +115,38 @@ Backgammon.Game = {
     showDice : function () {
         var roll = this.getDiceRoll(),
             game = this.game,
+            playerTurn = this.playerTurn,
+            firstRoll = roll[0],
+            secondRoll = roll[1],
             dice;
 
         dice = this.diceGroup.getAt(0);
         dice.reset(game.world.width / 2 - 96, game.world.height / 2 - 90);
-        dice.frame = roll[0] - 1;
+        dice.frame = firstRoll - 1;
 
         dice = this.diceGroup.getAt(1);
         dice.reset(game.world.width / 2, game.world.height / 2 - 90);
-        dice.frame = roll[1] - 1;
+        dice.frame = secondRoll - 1;
+
+        if(!playerTurn) {
+            this.playerTurn = firstRoll > secondRoll ? 'white' : 'black';
+        } else {
+            if(playerTurn === 'white') {
+                this.playerTurn = 'black';
+            } else {
+                this.playerTurn = 'white';
+            }
+        }
+    },
+    clearSelectedBuckets : function () {
+        var selectedBuckets = this.selectedBuckets,
+            length = selectedBuckets.length,
+            i;
+
+        for(i = 0; i < length; i++) {
+            selectedBuckets[i].selected = false;
+        }
+
     },
     onRollDiceButtonClick  : function () {
         if(!this.diceRollGroup.isAnimating) {
@@ -146,7 +172,11 @@ Backgammon.Game = {
             for(i = 0; i <= 23; i++) {
                 bucket = buckets[i];
                 if(bucket.rectangle.contains(pointer.position.x, pointer.position.y)) {
-                    
+                    if(bucket.color === this.playerTurn) {
+                        this.clearSelectedBuckets();
+                        bucket.selected = true;
+                        this.selectedBuckets.push(bucket);
+                    }
                 }
             }
         }
@@ -166,6 +196,7 @@ Backgammon.Bucket = {
     width             : undefined,
     height            : undefined,
     rectangle         : undefined,
+    selected          : false,
     init              : function (game, index) {
         var position;
 
@@ -185,9 +216,12 @@ Backgammon.Bucket = {
         this.rectangle = new Phaser.Rectangle(this.x+5, this.y, this.width-5, this.height);
     },
     render : function () {
-        this.game.debug.geom(this.rectangle,'rgba(0,255,0,0.4)');
+        if(this.selected) {
+            this.game.debug.geom(this.rectangle, 'rgba(204,204,204,0.2)')
+        }
     },
     addChecker        : function (checker) {
+        this.color = checker.color;
         this.checkers.push(checker);
         this.count = this.checkers.length;
     },
